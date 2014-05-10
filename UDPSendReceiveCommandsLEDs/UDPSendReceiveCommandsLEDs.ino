@@ -10,6 +10,16 @@
  by Michael Margolis
  
  This code is in the public domain.
+ 
+ Michael's orignal sketch has been modified to control a set of LPD8806 LEDs 
+ with a linear crossfade when transitioning between LEDs
+ 
+ Some of the code was harvested from another LED sketch
+ https://github.com/adafruit/LPD8806
+ 
+ modified by James Grantham
+ May 9, 2014
+ 
  */
 
 
@@ -27,8 +37,17 @@ const int nLEDs = 32;
 int dataPin  = 2;
 int clockPin = 3;
 
-void transitionEffect();
+void transitionEffect01();
 void callback();
+
+// List of image effect and alpha channel rendering functions; the code for
+// each of these appears later in this file.  Just a few to start with...
+// simply append new ones to the appropriate list here:
+void (*transitionEffect[])() = {
+//  renderEffect00,
+//  renderEffect01,
+//  renderEffect02,
+  transitionEffect01 };
 
 // First parameter is the number of LEDs in the strand.  The LED strips
 // are 32 LEDs per meter but you can extend or cut the strip.  Next two
@@ -36,14 +55,13 @@ void callback();
 LPD8806 strip = LPD8806(nLEDs, dataPin, clockPin);
 
 byte imgData[nLEDs * 3]; // Data for 1 long strips worth of imagery
-int  fxVars[50];             // Effect instance variables (explained later)
+
+byte backImgData[nLEDs * 3]; // Data for 1 long strips worth of imagery
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
 byte mac[] = {  
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-
-//IPAddress ip(192, 168, 1, 177);
 
 unsigned int localPort = 8888;      // local port to listen on
 
@@ -78,7 +96,8 @@ void setup() {
     sprintf(remoteIPAddy,"%s%s",remoteIPAddy,addyPart);
     
   memset(imgData, 0, sizeof(imgData)); // Clear image data
-  fxVars[0] = 0;           // Mark back image as initialized
+  memset(backImgData, 0, sizeof(imgData)); // Clear image data
+
     
   // Timer1 is used so the strip will update at a known fixed frame rate.
   // Each effect rendering function varies in processing complexity, so
@@ -90,7 +109,7 @@ void setup() {
   }
   Serial.print(remoteIPAddy); 
   
-  pixelPOS = 0;
+  pixelPOS = 1;
   byte pixelR = 90;
   byte pixelG = 90;
   byte pixelB = 90;
@@ -131,7 +150,7 @@ void loop() {
     */
     //Serial.print(", port ");
     //Serial.println(Udp.remotePort());
-    
+    Serial.print("here we go");
     // CLear the packet buffer of last message
     memset(packetBuffer, 0, UDP_TX_PACKET_MAX_SIZE);
     // read the packet into packetBufffer
@@ -173,10 +192,10 @@ void loop() {
       changeB();
     }
     
-    strip.setPixelColor(pixelPOS, strip.Color(pixelR, pixelG, pixelB)); // Set new pixel 'on'
-    strip.show();              // Refresh LED states
-    strip.setPixelColor(pixelPOS, 0); // Erase pixel, but don't refresh!
-    delay(50);
+    //strip.setPixelColor(pixelPOS, strip.Color(pixelR, pixelG, pixelB)); // Set new pixel 'on'
+    //strip.show();              // Refresh LED states
+    //strip.setPixelColor(pixelPOS, 0); // Erase pixel, but don't refresh!
+    //delay(50);
     
     
     // send a reply, to the IP address and port that sent us the packet we received
@@ -253,11 +272,10 @@ void callback() {
   byte *backPtr    = &imgData[0],
        r, g, b;
   int  i;
-
   // Always render back image based on current effect index:
   (*transitionEffect)();
 
-   // No transition in progress; just show back image
+   // No transition in progress; just show image
     for(i=0; i<nLEDs; i++) {
       // See note above re: r, g, b vars.
       r = *backPtr++;
@@ -265,4 +283,34 @@ void callback() {
       b = *backPtr++;
       strip.setPixelColor(i, r, g, b);
     }
+  }
+  
+  void transitionEffect01() {
+    
+
+    
+    for(int i = 0;i < nLEDs * 3; i++) {
+             //Serial.print("called");
+
+      if( (i/3)+1 != pixelPOS) {
+         
+           backImgData[i]=0;  // Changes the back img to blank if the pixel has been moved
+        
+      } else {
+        
+            backImgData[i]=20; // Changes the back image to white if the pixel has moved
+      }
+      
+      if(imgData[i] < backImgData[i]) {
+        
+          imgData[i]+=1;
+          
+      } else if (imgData[i] > backImgData[i]) {
+        
+         imgData[i]-=1; 
+         
+      }
+      
+    }
+    
   }

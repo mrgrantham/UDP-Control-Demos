@@ -2,7 +2,7 @@
  //=====================================================
  
  // Processing UDP example to send and receive string data from Arduino 
- // press any key to send the "Hello Arduino" message
+ // press any key to send arrow directional commands to the arduino
  
  
  import hypermedia.net.*;
@@ -21,7 +21,7 @@
  }
  
  void keyPressed() {
- String ip       = "192.168.2.12"; // the remote IP address
+ String ip       = "10.0.0.13"; // the remote IP address
  int port        = 8888;        // the destination port
  
  
