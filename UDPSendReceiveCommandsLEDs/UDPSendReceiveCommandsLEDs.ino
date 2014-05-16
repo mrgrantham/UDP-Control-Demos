@@ -70,6 +70,7 @@ char packetBuffer[UDP_TX_PACKET_MAX_SIZE]; //buffer to hold incoming packet,
 //char  ReplyBuffer[] = "acknowledged";       // a string to send back
 char buf[50];
 int pixelPOS;
+int subPixelPOS;
 byte pixelR;
 byte pixelG;
 byte pixelB;
@@ -110,6 +111,7 @@ void setup() {
   Serial.print(remoteIPAddy); 
   
   pixelPOS = 1;
+  subPixelPOS = 0;
   byte pixelR = 90;
   byte pixelG = 90;
   byte pixelB = 90;
@@ -150,7 +152,6 @@ void loop() {
     */
     //Serial.print(", port ");
     //Serial.println(Udp.remotePort());
-    Serial.print("here we go");
     // CLear the packet buffer of last message
     memset(packetBuffer, 0, UDP_TX_PACKET_MAX_SIZE);
     // read the packet into packetBufffer
@@ -301,16 +302,38 @@ void callback() {
             backImgData[i]=20; // Changes the back image to white if the pixel has moved
       }
       
-      if(imgData[i] < backImgData[i]) {
-        
-          imgData[i]+=1;
-          
-      } else if (imgData[i] > backImgData[i]) {
-        
-         imgData[i]-=1; 
-         
-      }
+      // Rely on integer math to lose signifigance and then compare the reconstructed i to the original i 
+      // to see if you are at the correct subPixel that needs changing
       
+     if(((i/3) * 3) + subPixelPOS == i) {
+       
+       
+       //Serial.print("I: ");
+       //Serial.println(((i/3) * 3));
+
+        if(imgData[i] < backImgData[i]) {
+          
+            imgData[i]+=1;
+            
+        } else if (imgData[i] > backImgData[i]) {
+          
+           imgData[i]-=1; 
+           
+        }
+      
+      
+     }
+     
+
+     
     }
+    
+         // increment subpixel unless at 2 already. and in that case reset
+     
+      if(subPixelPOS < 3) {
+         subPixelPOS++; 
+      } else {
+         subPixelPOS=0; 
+      }
     
   }
